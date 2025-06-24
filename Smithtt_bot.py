@@ -1,4 +1,5 @@
 import os
+subprocess.run(["bash", "install_ffmpeg.sh"])
 import uuid
 import subprocess
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
