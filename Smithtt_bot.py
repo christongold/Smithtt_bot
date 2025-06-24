@@ -2,7 +2,6 @@ import os
 import subprocess
 subprocess.run(["bash", "install_ffmpeg.sh"])
 import uuid
-import subprocess
 from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
 from telegram.ext import (ApplicationBuilder, CommandHandler, MessageHandler, filters,
                           CallbackQueryHandler, ContextTypes, ConversationHandler)
@@ -51,14 +50,31 @@ async def select_copies(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await query.edit_message_text(text=f"Spoofing {copies} copy/copies. Please wait...")
     input_path = user_data[uid]["input_path"]
 
-    spoofed_files = spoof_video(input_path, OUTPUT_DIR, copies)
+    spoofed_files, metadata_report_path = spoof_video(input_path, OUTPUT_DIR, copies)
     for path in spoofed_files:
         await context.bot.send_document(chat_id=uid, document=open(path, 'rb'))
 
+    await context.bot.send_document(chat_id=uid, document=open(metadata_report_path, 'rb'), filename="metadata_comparison.txt")
     return ConversationHandler.END
+
+def get_metadata(file_path):
+    try:
+        result = subprocess.run(
+            ["./bin/ffprobe", "-v", "quiet", "-show_entries", "format_tags", "-of", "default=noprint_wrappers=1", file_path],
+            capture_output=True,
+            text=True
+        )
+        return result.stdout.strip()
+    except Exception as e:
+        return f"Error reading metadata for {file_path}: {e}"
 
 def spoof_video(input_path, output_dir, num_copies):
     output_files = []
+    metadata_log = []
+
+    orig_metadata = get_metadata(input_path)
+    metadata_log.append(f"Original File: {os.path.basename(input_path)}\n{'-'*60}\n{orig_metadata}\n")
+
     for i in range(1, num_copies + 1):
         unique_id = str(uuid.uuid4().hex[:8])
         output_filename = f"{os.path.splitext(os.path.basename(input_path))[0]}_spoofed_{unique_id}.mp4"
@@ -80,9 +96,16 @@ def spoof_video(input_path, output_dir, num_copies):
         try:
             subprocess.run(ffmpeg_cmd, check=True)
             output_files.append(output_path)
+            spoofed_metadata = get_metadata(output_path)
+            metadata_log.append(f"Spoofed File: {os.path.basename(output_path)}\n{'-'*60}\n{spoofed_metadata}\n")
         except subprocess.CalledProcessError as e:
             print(f"FFmpeg error: {e}")
-    return output_files
+
+    report_path = os.path.join(output_dir, "metadata_comparison.txt")
+    with open(report_path, "w") as f:
+        f.write("\n\n".join(metadata_log))
+
+    return output_files, report_path
 
 async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("Operation cancelled. Send a new video to start again.")
@@ -90,7 +113,6 @@ async def cancel(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 if __name__ == '__main__':
     import asyncio
-    import os
     from telegram.ext import Application
 
     TOKEN = os.environ.get("BOT_TOKEN")
@@ -106,4 +128,3 @@ if __name__ == '__main__':
     app.add_handler(conv_handler)
     print("Bot is running...")
     asyncio.run(app.run_polling())
-
