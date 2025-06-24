@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: tiktok-spoofer-bot
+    runtime: python
+    buildCommand: ""
+    startCommand: python telegram_spoofer_bot.py
+    envVars:
+      - key: BOT_TOKEN
+        sync: false
+
