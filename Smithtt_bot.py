@@ -91,20 +91,6 @@ if __name__ == '__main__':
     import os
     from telegram.ext import Application
 
-    TOKEN = os.environ.get("7645005803:AAFXWsTcQmXCWJnvidI4BrFXxmMqYH8KiPA")  # Use Render's env vars
-
-    app = ApplicationBuilder().token(TOKEN).build()
-
-    conv_handler = ConversationHandler(
-        entry_points=[CommandHandler("start", start)],
-        states={
-            ASK_VIDEO: [MessageHandler(filters.VIDEO | filters.Document.VIDEO, handle_video)],
-            ASK_COPIES: [CallbackQueryHandler(select_copies)]
-        },
-        fallbacks=[CommandHandler("cancel", cancel)]
-    )
-
-    app.add_handler(conv_handler)
-    print("Processing...")
+    TOKEN = os.environ.get("BOT_TOKEN")
     asyncio.run(app.run_polling())
 
