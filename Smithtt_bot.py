@@ -65,7 +65,7 @@ def spoof_video(input_path, output_dir, num_copies):
         output_path = os.path.join(output_dir, output_filename)
 
         ffmpeg_cmd = [
-            "ffmpeg",
+            "./bin/ffmpeg",
             "-i", input_path,
             "-metadata", f"title=spoofed_{unique_id}",
             "-metadata", f"comment=TikTokSpoof_{i}",
